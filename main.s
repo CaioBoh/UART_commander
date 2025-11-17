@@ -47,19 +47,19 @@ _start:
     # ---------------------------------
     # IMPRIMIR A MENSAGEM DE PROMPT
     # ---------------------------------
-    movia   r8, MSG_PROMPT              # endereço da string
+    movia   r8, MSG_PROMPT                  # endereço da string
 
     # Mostra a mensagem inicial
     PRINT_MSG:
-        ldb     r9, 0(r8)               # lê um byte
-        beq     r9, r0, RVALID_LOOP     # se for '\0', sai
+        ldb     r9, 0(r8)                   # lê um byte
+        beq     r9, r0, RVALID_LOOP         # se for '\0', sai
     
     # Lê cada caractere e escreve no prompt
     WAIT_WSPACE:
         ldwio   r10, CONTROL(r11)
-        andi    r13, r10, 0xFFFF        # checa espaço p/ escrever
-        beq     r13, r0, WAIT_WSPACE    # Se retornar true, não tem espaço no buffer
-        stwio   r9, DATA(r11)           # escreve caractere
+        andi    r13, r10, 0xFFFF            # checa espaço p/ escrever
+        beq     r13, r0, WAIT_WSPACE        # Se retornar true, não tem espaço no buffer
+        stwio   r9, DATA(r11)               # escreve caractere
         addi    r8, r8, 1
         br      PRINT_MSG
 
@@ -83,14 +83,6 @@ _start:
         slli        r12, r12, 8             # Deslocando BUFFER 8 bits para à esquerda (xxxxxxxx xxxxxxxx xxxxxxxx 00000000) para (xxxxxxxx xxxxxxxx 00000000 xxxxxxxx)
         add         r12, r12, r9            # Escreve o caractere dentro do BUFFER
     
-    /**
-     * Criar o buffer [OK]
-     * Ajustar rotina para
-     *  - Ler dígito [OK]
-     *  - Armazenar no buffer [OK]
-     *  - Deslocar o buffer 8 bits para esquerda [OK]
-     */
-
     br RVALID_LOOP                         # Polling
 
     # ---------------------------------
@@ -115,15 +107,6 @@ _start:
         beq     r13, r14, COMM_21
 
         br RVALID_LOOP
-
-    /**
-     * Polling para aguardar a tecla enter [OK]
-     * armazena tudo que foi escrito em um buffer [OK]
-     * Recebeu enter: sai do polling e le buffer []
-     * Leu o comando []
-     * Executa o comando [PENDING]
-     */
-
 
 END:
     # EPILOGO (desmontar stack frame)
