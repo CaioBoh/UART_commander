@@ -1,4 +1,18 @@
 /**
+ * DICIONÁRIO
+ *
+ * r4  -> Índice / número do LED (resultado da conversão dos dígitos)
+ * r5  -> Byte menos significativo do argumento (low_char) e temporário (limite 9)
+ * r6  -> Byte mais significativo do argumento (high_char) e temporário
+ * r7  -> Máscara de bit para selecionar o LED (1 << num) / temporário
+ * r8  -> Contador para geração da máscara (i) / temporário
+ * r9  -> Endereço base dos LEDs (`RED_LEDS`)
+ * r10 -> Valor lido/escrito no registrador de LEDs (temporário)
+ * r11 -> Constante 0x10000000 carregada no início (uso opcional)
+ * r12 -> Argumento recebido pela rotina (contém bytes ASCII dos dígitos)
+ */
+
+/**
  * led.s
  *
  * Rotinas para controle dos LEDs
