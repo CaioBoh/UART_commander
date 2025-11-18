@@ -40,6 +40,7 @@ Desenvolver uma aplicação embarcada robusta que demonstra a integração de m�
 
 ## Cronograma de Desenvolvimento
 
+TBD
 
 ## Arquitetura do Aplicativo
 
@@ -125,9 +126,7 @@ UART Commander (main.s)
 
 ## Desenvolvimento do Aplicativo
 
-
-## Testes e Validação
-
+TBD
 
 ## Links
 
