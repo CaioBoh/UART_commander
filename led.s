@@ -59,12 +59,12 @@ _start:
         add     r4, r7, r8           # r4 = high * 10
         add     r4, r4, r5           # r4 = high*10 + low  => r4 = num
 
-        addi    r5, r0, 9            # r5 = 9 (limite máximo de índice de LED; ajuste se necessário)
-        bgt     r4, r5, COMM00_SET9  # se num > 9, pular para ajustar para 9
+        addi    r5, r0, 17            # r5 = 17 (limite máximo de índice de LED; ajuste se necessário)
+        bgt     r4, r5, COMM00_SET17  # se num > 17, pular para ajustar para 17
         br      COMM00_CONTINUE      # senão continuar
 
-    COMM00_SET9:
-        addi    r4, r0, 9            # força r4 = 9 (limita índice)
+    COMM00_SET17:
+        addi    r4, r0, 17            # força r4 = 17 (limita índice)
 
     COMM00_CONTINUE:
         movi    r7, 1                # r7 = máscara inicial = 1
@@ -114,13 +114,13 @@ _start:
         add     r4, r7, r8           # r4 = high * 10
         add     r4, r4, r5           # r4 = high*10 + low  => r4 = num
 
-        addi    r5, r0, 9            # r5 = 9 (limite máximo de índice de LED; ajuste se necessário)
-        bgt     r4, r5, COMM01_SET9  # se num > 9, pular para ajustar para 9
+        addi    r5, r0, 17            # r5 = 17 (limite máximo de índice de LED; ajuste se necessário)
+        bgt     r4, r5, COMM01_SET17  # se num > 17, pular para ajustar para 17
 
         br      COMM01_CONTINUE      # senão continuar
 
-    COMM01_SET9:
-        addi    r4, r0, 9            # força r4 = 9 (limita índice)
+    COMM01_SET17:
+        addi    r4, r0, 17            # força r4 = 17 (limita índice)
 
     COMM01_CONTINUE:
         movi    r7, 1                # r7 = máscara inicial = 1
@@ -133,7 +133,7 @@ _start:
         blt     r8, r4, COMM01_MASK_LOOP # repetir enquanto r8 < num
 
     COMM01_MASK_DONE:
-        not     r7, r7               # r7 = ~mask  (máscara invertida para limpar bit)
+        nor     r7, r7, r0           # r7 = ~(r7 | r0) = ~r7
         movia   r9, RED_LEDS         # r9 = endereço base dos LEDs
         ldwio   r10, (r9)            # r10 = valor atual do registrador de LEDs
         and     r10, r10, r7         # r10 = r10 & ~mask  (limpa o bit correspondente)
