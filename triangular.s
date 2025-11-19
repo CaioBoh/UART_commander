@@ -116,10 +116,13 @@ _start:
 
             mov r15, r14          # unidades no byte 0
             slli r7, r7, 8
+
             or r15, r15, r7       # dezenas no byte 1
             slli r6, r6, 16
+            
             or r15, r15, r6       # centenas no byte 2
             slli r8, r8, 24
+            
             or r15, r15, r8       # milhares no byte 3   
             stwio r15, 0(r4)
 
