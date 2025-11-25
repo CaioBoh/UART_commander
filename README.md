@@ -38,10 +38,6 @@ O **UART Commander** é um sistema de controle embarcado desenvolvido em linguag
 
 Desenvolver uma aplicação embarcada robusta que demonstra a integração de múltiplos periféricos através de um sistema de fila de comandos UART, com tratamento de interrupções e sincronização de eventos em tempo real.
 
-## Cronograma de Desenvolvimento
-
-TBD
-
 ## Arquitetura do Aplicativo
 
 O projeto segue uma arquitetura modular onde cada conjunto de funcionalidades é implementado em um arquivo assembly separado. Isso facilita a manutenção, testes e reutilização do código.
@@ -99,20 +95,20 @@ UART_commander/
 ```
 UART Commander (main.s)
     │
-    ├─→ [Comando "00"] → led.s (COMM_00)
-    │                      └─→ Acumula e exibe nos LEDs
+    ├─ [Comando "00"] → led.s (COMM_00)
+    │                      └─ Acumula e exibe nos LEDs
     │
-    ├─→ [Comando "01"] → led.s (COMM_01)
-    │                      └─→ Operações adicionais com LEDs
+    ├─ [Comando "01"] → led.s (COMM_01)
+    │                      └─ Operações adicionais com LEDs
     │
-    ├─→ [Comando "10"] → triangular.s (COMM_10)
-    │                      └─→ Calcula e exibe número triangular
+    ├─ [Comando "10"] → triangular.s (COMM_10)
+    │                      └─ Calcula e exibe número triangular
     │
-    ├─→ [Comando "20"] → rotate.s (COMM_20)
-    │                      └─→ Rotaciona "Oi 2026" + controles de botões
+    ├─ [Comando "20"] → rotate.s (COMM_20)
+    │                      └─ Rotaciona "Oi 2026" + controles de botões
     │
-    └─→ [Comando "21"] → rotate.s (COMM_21)
-                           └─→ Cancela rotação
+    └─ [Comando "21"] → rotate.s (COMM_21)
+                           └─ Cancela rotação
 ```
 
 ### Integração com Hardware
@@ -124,12 +120,6 @@ UART Commander (main.s)
 - **Displays 7-seg**: Exibição de valores em formato visual
 - **Timer/Interrupções**: Sincronização de eventos e delays (200ms para rotação)
 
-## Desenvolvimento do Aplicativo
-
-TBD
-
 ## Links
 
-Relatório: https://docs.google.com/document/d/1StY9M0XvJlAyz381Gy_JC2evbZyrFpxo1QgINj96hIs/edit?usp=sharing
-
-Cronograma: https://docs.google.com/spreadsheets/d/1FzR0vg-QmrNAaIQtij9g-IKhSwcWRL2wnVDP1aYRW18/edit?usp=sharing
+Relatório: https://docs.google.com/document/d/1StY9M0XvJlAyz381Gy_JC2evbZyrFpxo1QgINj96hIs/edit?usp=drivesdk

@@ -32,6 +32,37 @@
 
 .global _start
 
+# EXCEPTION HANDLER - necessário para interrupções do timer
+.org 0x20
+
+    # Salva contexto - NÃO pode corromper registradores do main
+    subi sp, sp, 8
+    stw ea, 0(sp)
+    stw et, 4(sp)
+
+    rdctl et, ipending
+    beq et, r0, OTHER_EXCEPTIONS
+    subi ea, ea, 4
+
+    # Verifica se é IRQ 0 (timer) - usa et que já foi salvo
+    andi et, et, 1
+    beq et, r0, FIM_RTI
+
+    # Chama ISR do timer (ela salva seus próprios registradores)
+    call timer_isr
+    br FIM_RTI
+
+OTHER_EXCEPTIONS:
+    br FIM_RTI
+
+FIM_RTI:
+    # Restaura contexto
+    ldw et, 4(sp)
+    ldw ea, 0(sp)
+    addi sp, sp, 8
+    eret
+
+# MAIN CODE
 _start:
     movia sp, 0x007FFFFC
 
@@ -44,9 +75,7 @@ _start:
     # Define o endereço base (escrita da base + offset)
     movi r11, 0x10000000
 
-    # ---------------------------------
     # IMPRIMIR A MENSAGEM DE PROMPT
-    # ---------------------------------
     movia   r8, MSG_PROMPT                  # endereço da string
 
     # Mostra a mensagem inicial
@@ -63,9 +92,7 @@ _start:
         addi    r8, r8, 1
         br      PRINT_MSG
 
-    # ---------------------------------
     # LOOP DE LEITURA ORIGINAL
-    # ---------------------------------
     RVALID_LOOP:
         ldwio       r8, DATA(r11)           # Armazena DATA da UART
         andi        r13, r8, 0x8000         # Aplica máscara para pegar RVALID
@@ -76,37 +103,67 @@ _start:
         ldwio       r10, CONTROL(r11)       # Armazena CONTROL da UART
         andi        r13, r10, 0xFF00        # Aplica máscara para pegar WSPACE
         beq         r13, r0, WSPACE_LOOP    # Enquanto não tiver WSPACE, volta para WSPACE_LOOP
-        stwio       r9, DATA(r11)           # Escreve o caractere dentro do DATA
-        andi        r13, r9, 0xF            # Aplica máscara com o caractere '\n' (ENTER)
-        movi        r14, 0x0A
-        beq         r13, r14, READ_COMMAND  # Inicia a rotina de leitura de comando no prompt
-        slli        r12, r12, 8             # Deslocando BUFFER 8 bits para à esquerda (xxxxxxxx xxxxxxxx xxxxxxxx 00000000) para (xxxxxxxx xxxxxxxx 00000000 xxxxxxxx)
+        stwio       r9, DATA(r11)           # Escreve o caractere dentro do DATA (echo)
+        movi        r14, 0x0D               # '\r' (carriage return)
+        beq         r9, r14, READ_COMMAND   # Se for Enter, processa comando
+        movi        r14, 0x0A               # '\n' (line feed)
+        beq         r9, r14, READ_COMMAND   # Se for Enter, processa comando
+        slli        r12, r12, 8             # Deslocando BUFFER 8 bits para à esquerda
         add         r12, r12, r9            # Escreve o caractere dentro do BUFFER
     
     br RVALID_LOOP                         # Polling
 
-    # ---------------------------------
     # LEITURA DO ENTER NO PROMPT
-    # ---------------------------------
     READ_COMMAND:
         movi    r14, 0x30300000             # '00'
         andi    r13, r12, 0xFFFF0000
-        beq     r13, r14, COMM_00
+        beq     r13, r14, CALL_COMM_00
 
         movi    r14, 0x30310000             # '01'
-        beq     r13, r14, COMM_01
+        beq     r13, r14, CALL_COMM_01
 
         movi    r14, 0x3130                 # '10'
         andi    r13, r12, 0x0000FFFF
-        beq     r13, r14, COMM_10
+        beq     r13, r14, CALL_COMM_10
 
         movi    r14, 0x3230                 # '20'
-        beq     r13, r14, COMM_20
+        beq     r13, r14, CALL_COMM_20
 
         movi    r14, 0x3231                 # '21'
-        beq     r13, r14, COMM_21
+        beq     r13, r14, CALL_COMM_21
 
+        movi    r12, 0                      # Comando inválido - limpa buffer
         br RVALID_LOOP
+
+    CALL_COMM_00:
+        call COMM_00
+        movi r12, 0
+        br REPRINT_PROMPT
+
+    CALL_COMM_01:
+        call COMM_01
+        movi r12, 0
+        br REPRINT_PROMPT
+
+    CALL_COMM_10:
+        call COMM_10
+        movi r12, 0
+        br REPRINT_PROMPT
+
+    CALL_COMM_20:
+        call COMM_20
+        movi r12, 0
+        br REPRINT_PROMPT
+
+    CALL_COMM_21:
+        call COMM_21
+        movi r12, 0
+        br REPRINT_PROMPT
+
+    REPRINT_PROMPT:
+        # Recarrega o endereço da mensagem de prompt
+        movia r8, MSG_PROMPT
+        br PRINT_MSG
 
 END:
     # EPILOGO (desmontar stack frame)

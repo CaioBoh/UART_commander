@@ -27,20 +27,14 @@ _start:
 
     movi r11, 0x10000000
 
-    # ---------------------------------
     # TRIAGULAR
-    # ---------------------------------
         COMM_10:
-            # -------------------------------------------------
             # 1. Ler valor dos switches (0–255)
-            # -------------------------------------------------
             movia r4, SWITCHES
             ldwio r5, 0(r4)
             andi r5, r5, 0xFF      # r5 = N
 
-            # -------------------------------------------------
             # 2. Calcular número triangular T(N) = 1+2+...+N
-            # -------------------------------------------------
             mov r6, r0            # acumulador
             mov r7, r0            # contador i
 
@@ -54,9 +48,7 @@ _start:
         tri_done_comm:
             mov r5, r6            # r5 = T(N)
 
-            # -------------------------------------------------
             # 3. Converter r5 em decimal (dezenaMilhar/milhares/centenas/dezenas/unidades)
-            # -------------------------------------------------
             mov r9, r0            # dezena de milhar
             mov r8, r0            # milhares
             mov r6, r0            # centenas
@@ -94,9 +86,7 @@ _start:
         uni_set_comm:
             mov r14, r5
 
-            # -------------------------------------------------
             # 4. Converter dígitos para tabela 7 segmentos
-            # -------------------------------------------------
             movia r4, HEX_TABLE
             add r15, r4, r14
             ldb r14, 0(r15)    # unidades
@@ -109,9 +99,7 @@ _start:
             add r15, r4, r9
             ldb r9, 0(r15)     # dezena de milhar
 
-            # -------------------------------------------------
             # 5. Enviar aos displays HEX0–HEX4
-            # -------------------------------------------------
             movia r4, HEX_BASE
 
             mov r15, r14          # unidades no byte 0

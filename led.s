@@ -36,9 +36,7 @@ _start:
 
     movi r11, 0x10000000
 
-    # ---------------------------------
     # ACENDER XX-ÉSIMO LED VERMELHO
-    # ---------------------------------
     COMM_00:
         addi    sp, sp, -20          # Reserva 20 bytes na pilha (salvar r4..r8)
         stw     r4, 0(sp)
@@ -91,9 +89,7 @@ _start:
 
         ret                          # retornar ao chamador (main)
 
-    # ---------------------------------
     # APAGAR XX-ÉSIMO LED VERMELHO
-    # ---------------------------------
     COMM_01:
         addi    sp, sp, -20          # Reserva 20 bytes na pilha (salvar r4..r8)
         stw     r4, 0(sp)

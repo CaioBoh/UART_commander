@@ -7,18 +7,16 @@
 .equ TIMER_LOW,      0x2008
 .equ TIMER_HIGH,     0x200C
 
+# Variável global para o estado
+.data
+.align 2
+current_state: .word 0
+
+.text
 .global COMM_20
 .global COMM_21
+.global timer_isr
 
-###########################################################
-# MAIN: chama COMM_20
-###########################################################
-_start:
-    movia sp, 0x007FFFFC
-
-###########################################################
-# COMM_20 — hardcoded rotation
-###########################################################
 COMM_20:
     # PROLOGO
     addi sp, sp, -8
@@ -28,125 +26,30 @@ COMM_20:
 
     movia r11, BASE
 
-    ###########################################################
-    # CONFIG TIMER — 200ms (ou 4s se quiser trocar LOW/HIGH)
-    ###########################################################
-    movia r8, 0x9680     # 200ms LOW
+    stwio r0, TIMER_CONTROL(r11)        # Para o timer antes de reconfigurar
+    stwio r0, TIMER_STATUS(r11)         # Limpa o bit TO que pode estar setado
+
+    movia r8, current_state             # Reseta o estado para começar do zero
+    stw r0, 0(r8)
+
+    # CONFIG TIMER — 200ms
+    movia r8, 0x9680                    # 200ms LOW
     stwio r8, TIMER_LOW(r11)
 
-    movia r8, 0x0098     # 200ms HIGH
+    movia r8, 0x0098                    # 200ms HIGH
     stwio r8, TIMER_HIGH(r11)
 
-    movi r8, 0b110       # start + continuous
+    movi r8, 0b111
     stwio r8, TIMER_CONTROL(r11)
 
-    movi r10, 0          # estado atual (0..3)
+    # Habilitar interrupções do timer
+    movi r8, 0b1
+    wrctl ienable, r8
 
-ROT_LOOP:
-
-WAIT_TIMER:
-    ldwio r8, TIMER_STATUS(r11)
-    andi  r9, r8, 1
-    beq   r9, r0, WAIT_TIMER
-
-    stwio r0, TIMER_STATUS(r11)   # clear TO
-
-
-    ###########################################################
-    # ESTADOS HARD-CODED
-    ###########################################################
-
-    STATE:
-        beq r10, r0, DO_STATE0      # 0
-        movi r8, 1
-        beq r10, r8, DO_STATE1      # 1
-        movi r8, 2
-        beq r10, r8, DO_STATE2      # 2
-        movi r8, 3
-        beq r10, r8, DO_STATE3      # 3
-        movi r8, 4
-        beq r10, r8, DO_STATE4      # 4
-        movi r8, 5
-        beq r10, r8, DO_STATE5      # 5
-        movi r8, 6
-        beq r10, r8, DO_STATE6      # 6
-        br  DO_STATE7               # 7
-
-    # 3f - 0
-    # 06 - 1
-    # 5b - 2
-    # 7d - 6
-
-    DO_STATE0:
-        movia r14, 0x5B3F5B7D   # HEX0..HEX3
-        movia r15, 0x003F0600   # HEX4..HEX7
-        br WRITE_HEX
-
-    DO_STATE1:
-        movia r14, 0x3F5B7D00   # HEX0..HEX3
-        movia r15, 0x3F06005B   # HEX4..HEX7
-        br WRITE_HEX
-
-    DO_STATE2:
-        movia r14, 0x5B7D003F   # HEX0..HEX3
-        movia r15, 0x06005B3F   # HEX4..HEX7
-        br WRITE_HEX
-
-    DO_STATE3:
-        movia r14, 0x7D003F06   # HEX0..HEX3
-        movia r15, 0x005B3F5B   # HEX4..HEX7
-        br WRITE_HEX
-
-    DO_STATE4:
-        movia r14, 0x003F0600   # HEX0..HEX3
-        movia r15, 0x5B3F5B7D   # HEX4..HEX7
-        br WRITE_HEX
-
-    DO_STATE5:
-        movia r14, 0x3F06005B   # HEX0..HEX3
-        movia r15, 0x3F5B7D00   # HEX4..HEX7
-        br WRITE_HEX
-
-    DO_STATE6:
-        movia r14, 0x06005B3F   # HEX0..HEX3
-        movia r15, 0x5B7D003F   # HEX4..HEX7
-        br WRITE_HEX
-
-    DO_STATE7:
-        movia r14, 0x005B3F5B   # HEX0..HEX3
-        movia r15, 0x7D003F06   # HEX4..HEX7
-        br WRITE_HEX
-
-
-###########################################################
-# ESCREVER NOS DISPLAYS
-###########################################################
-WRITE_HEX:
-    movia r4, HEX_BASE
-    stwio r14, 0(r4)        # HEX0..HEX3
-    stwio r15, 16(r4)       # HEX4..HEX7
-
-
-###########################################################
-# PRÓXIMO ESTADO
-###########################################################
-    # incrementa estado
-    addi r10, r10, 1
-
-    # compara r10 >= 8
-    movi r8, 8
-    bge  r10, r8, RESET_STATE
-
-    br ROT_LOOP
-
-    RESET_STATE:
-        movi r10, 0
-        br ROT_LOOP
-
-
-    movi r10, 0
-    br ROT_LOOP
-
+    # Habilitar interrupções globais
+    rdctl r8, status
+    ori r8, r8, 0b1
+    wrctl status, r8
 
     # EPILOGO
     ldw ra, 4(sp)
@@ -154,18 +57,132 @@ WRITE_HEX:
     addi sp, sp, 8
     ret
 
+timer_isr:
+    # Salva contexto
+    subi sp, sp, 32
+    stw r8, 0(sp)
+    stw r9, 4(sp)
+    stw r10, 8(sp)
+    stw r11, 12(sp)
+    stw r12, 16(sp)
+    stw r13, 20(sp)
+    stw r14, 24(sp)
+    stw r15, 28(sp)
 
+    # Limpa o bit TO no TIMER_STATUS
+    movia r11, BASE
+    stwio r0, TIMER_STATUS(r11)
 
-###########################################################
-# COMM_21 — sem função
-###########################################################
+    # Carrega o estado atual
+    movia r8, current_state
+    ldw r10, 0(r8)
+
+    # ESTADOS HARD-CODED
+    beq r10, r0, ISR_STATE0
+    movi r9, 1
+    beq r10, r9, ISR_STATE1
+    movi r9, 2
+    beq r10, r9, ISR_STATE2
+    movi r9, 3
+    beq r10, r9, ISR_STATE3
+    movi r9, 4
+    beq r10, r9, ISR_STATE4
+    movi r9, 5
+    beq r10, r9, ISR_STATE5
+    movi r9, 6
+    beq r10, r9, ISR_STATE6
+    br ISR_STATE7
+
+ISR_STATE0:
+    movia r14, 0x5B3F5B7D
+    movia r15, 0x003F0600
+    br ISR_WRITE_HEX
+
+ISR_STATE1:
+    movia r14, 0x3F5B7D00
+    movia r15, 0x3F06005B
+    br ISR_WRITE_HEX
+
+ISR_STATE2:
+    movia r14, 0x5B7D003F
+    movia r15, 0x06005B3F
+    br ISR_WRITE_HEX
+
+ISR_STATE3:
+    movia r14, 0x7D003F06
+    movia r15, 0x005B3F5B
+    br ISR_WRITE_HEX
+
+ISR_STATE4:
+    movia r14, 0x003F0600
+    movia r15, 0x5B3F5B7D
+    br ISR_WRITE_HEX
+
+ISR_STATE5:
+    movia r14, 0x3F06005B
+    movia r15, 0x3F5B7D00
+    br ISR_WRITE_HEX
+
+ISR_STATE6:
+    movia r14, 0x06005B3F
+    movia r15, 0x5B7D003F
+    br ISR_WRITE_HEX
+
+ISR_STATE7:
+    movia r14, 0x005B3F5B
+    movia r15, 0x7D003F06
+    br ISR_WRITE_HEX
+
+ISR_WRITE_HEX:
+    # Escreve nos displays
+    movia r9, HEX_BASE
+    stwio r14, 0(r9)
+    stwio r15, 16(r9)
+
+    # Incrementa estado
+    addi r10, r10, 1
+    movi r9, 8
+    blt r10, r9, ISR_SAVE_STATE
+
+    movi r10, 0                 # Reset para estado 0
+
+ISR_SAVE_STATE:
+    movia r8, current_state
+    stw r10, 0(r8)
+
+    # Restaura contexto
+    ldw r8, 0(sp)
+    ldw r9, 4(sp)
+    ldw r10, 8(sp)
+    ldw r11, 12(sp)
+    ldw r12, 16(sp)
+    ldw r13, 20(sp)
+    ldw r14, 24(sp)
+    ldw r15, 28(sp)
+    addi sp, sp, 32
+
+    eret
+
 COMM_21:
     addi sp, sp, -8
     stw fp, 0(sp)
     stw ra, 4(sp)
     mov fp, sp
 
-    # vazio
+    movia r11, BASE
+
+    stwio r0, TIMER_CONTROL(r11)        # Para o timer
+    stwio r0, TIMER_STATUS(r11)         # Limpa do timer
+    wrctl ienable, r0                   # Desabilita interrupções do timer no ienable
+
+    # Limpa os displays
+    movia r9, HEX_BASE
+    stwio r0, 0(r9)
+    stwio r0, 16(r9)
+
+    # Reseta o estado
+    movia r8, current_state
+    stw r0, 0(r8)
 
     ldw ra, 4(sp)
     ldw fp, 0(sp)
