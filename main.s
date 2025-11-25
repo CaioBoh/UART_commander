@@ -32,24 +32,37 @@
 
 .global _start
 
-# EXCEPTION HANDLER - necessário para interrupções do timer
+# EXCEPTION HANDLER
 .org 0x20
 
-    # Salva contexto - NÃO pode corromper registradores do main
-    subi sp, sp, 8
+    # Salva contexto - NÃO pode corromper registradores do main!
+    subi sp, sp, 12
     stw ea, 0(sp)
     stw et, 4(sp)
+    stw ra, 8(sp)
 
     rdctl et, ipending
     beq et, r0, OTHER_EXCEPTIONS
     subi ea, ea, 4
 
-    # Verifica se é IRQ 0 (timer) - usa et que já foi salvo
-    andi et, et, 1
-    beq et, r0, FIM_RTI
+    # Verifica se é IRQ 0 (timer)
+    andi ra, et, 1
+    bne ra, r0, EXT_IRQ0
+    
+    # Verifica se é IRQ 1 (botões)
+    andi ra, et, 2
+    bne ra, r0, EXT_IRQ1
 
-    # Chama ISR do timer (ela salva seus próprios registradores)
+    br FIM_RTI
+
+EXT_IRQ0:
+    # Chama ISR do timer
     call timer_isr
+    br FIM_RTI
+
+EXT_IRQ1:
+    # Chama ISR dos botões
+    call keys_isr
     br FIM_RTI
 
 OTHER_EXCEPTIONS:
@@ -57,9 +70,10 @@ OTHER_EXCEPTIONS:
 
 FIM_RTI:
     # Restaura contexto
+    ldw ra, 8(sp)
     ldw et, 4(sp)
     ldw ea, 0(sp)
-    addi sp, sp, 8
+    addi sp, sp, 12
     eret
 
 # MAIN CODE
