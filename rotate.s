@@ -7,9 +7,24 @@
 .equ TIMER_LOW,      0x2008
 .equ TIMER_HIGH,     0x200C
 
+# Variável global para o estado
+.data
+.align 2
+current_state: .word 0
+timer_flag:    .word 0
+
+.text
 .global COMM_20
 .global COMM_21
 
+###########################################################
+# VETOR DE EXCEÇÕES
+###########################################################
+.section .exceptions, "ax"
+    movia et, timer_isr
+    jmp et
+
+.text
 ###########################################################
 # MAIN: chama COMM_20
 ###########################################################
@@ -37,20 +52,31 @@ COMM_20:
     movia r8, 0x0098     # 200ms HIGH
     stwio r8, TIMER_HIGH(r11)
 
-    movi r8, 0b110       # start + continuous
+    movi r8, 0b111       # start + continuous + ITO (interrupção habilitada)
     stwio r8, TIMER_CONTROL(r11)
+
+    # Habilitar interrupções do timer no ienable (IRQ 0)
+    movi r8, 0b1
+    wrctl ienable, r8
+
+    # Habilitar interrupções globais (PIE bit no status)
+    movi r8, 0b1
+    wrctl status, r8
 
     movi r10, 0          # estado atual (0..3)
 
 ROT_LOOP:
+    # Espera pela flag de interrupção
+    movia r8, timer_flag
+    ldw r9, 0(r8)
+    beq r9, r0, ROT_LOOP
+    
+    # Limpa a flag
+    stw r0, 0(r8)
 
-WAIT_TIMER:
-    ldwio r8, TIMER_STATUS(r11)
-    andi  r9, r8, 1
-    beq   r9, r0, WAIT_TIMER
-
-    stwio r0, TIMER_STATUS(r11)   # clear TO
-
+    # Carrega o estado atual
+    movia r8, current_state
+    ldw r10, 0(r8)
 
     ###########################################################
     # ESTADOS HARD-CODED
@@ -137,15 +163,16 @@ WRITE_HEX:
     movi r8, 8
     bge  r10, r8, RESET_STATE
 
+    # Salva o novo estado
+    movia r8, current_state
+    stw r10, 0(r8)
     br ROT_LOOP
 
     RESET_STATE:
         movi r10, 0
+        movia r8, current_state
+        stw r10, 0(r8)
         br ROT_LOOP
-
-
-    movi r10, 0
-    br ROT_LOOP
 
 
     # EPILOGO
@@ -155,6 +182,33 @@ WRITE_HEX:
     ret
 
 
+
+###########################################################
+# ISR DO TIMER
+###########################################################
+timer_isr:
+    # Salva contexto
+    subi sp, sp, 12
+    stw r8, 0(sp)
+    stw r9, 4(sp)
+    stw r11, 8(sp)
+
+    # Limpa o bit TO no TIMER_STATUS
+    movia r11, BASE
+    stwio r0, TIMER_STATUS(r11)
+
+    # Seta a flag de timer
+    movia r8, timer_flag
+    movi r9, 1
+    stw r9, 0(r8)
+
+    # Restaura contexto
+    ldw r8, 0(sp)
+    ldw r9, 4(sp)
+    ldw r11, 8(sp)
+    addi sp, sp, 12
+
+    eret
 
 ###########################################################
 # COMM_21 — sem função
